@@ -1,0 +1,219 @@
+---
+title: "Capstone project kmeans"
+author: "Shivani Gupta"
+date: "01/05/2021"
+output: word_document
+---
+
+####################################### What you will learn and Implement #######################################
+
+# > Understand kmeans clustering.
+# > Understand retail Data for applying kmeans clustering.
+# > Understand the objective.
+# > Maths of kmeans clustering.
+# > understand Optimum number of cluster.
+# > Using elbow method to determine the optimal number of cluster.
+# > model fitting
+# > Evaluation
+
+# > Objective
+
+# The client is a leading Fashion retailer in Australia. Company runs a display advertising campaign for this brand, where it shows ads to users leading them to make a purchase on the brands website.The given dataset is the Sales data for all users who made a purchase online in the first half of October '17.
+
+# Based on your analysis, arrive at a statistical segmentation of the brands audience based 
+# on Revenue. The number of segments is up to you. Please provide definitions of each groups
+
+# > desired Library installation
+
+```{r}
+# install.packages("factoextra")
+# install.packages("rpivotTable")
+# install.packages("cluster")
+# install.packages("fpc")
+# install.packages("factoextra")
+# install.packages("rpivotTable")
+# install.packages("ggplot2")
+# install.packages("dplyr")
+# install.packages("magrittr")
+```
+
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(magrittr)
+library(cluster)
+library(fpc)
+library(factoextra)
+library(rpivotTable)
+```
+
+# > Setting working directory
+
+```{r}
+path<-"D:/data science/Industry Application - Kmeans"
+setwd(path)
+```
+
+# > reading data
+
+```{r}
+Revenue<-read.csv("RevenueCluster.csv", header=T, na.strings=c("","NA"))
+head(Revenue, 10)
+str(Revenue)
+Revenue$timestamp<-as.POSIXct(Revenue$timestamp, format = "%d-%m-%Y %H:%M")
+```
+
+# > subsetting/manipulating data to fit kmeans clustering
+
+# Calculating Missing value 
+
+```{r}
+sum(is.na(Revenue))
+sapply(Revenue, function(x) {
+  sum(is.na(x))
+})
+```
+
+#Treating missing categorical values with their mode.
+
+```{r}
+Mode<-function(v){
+   uniqv <- unique(Revenue$City)
+   uniqv[which.max(tabulate(match(Revenue$City, uniqv)))]
+}
+result<-Mode(Revenue$City)
+print(result)
+# mode value for city is Sydney.
+# Replacing NA's with Sydney
+Revenue$City[is.na(Revenue$City)]<-"Sydney"
+```
+
+
+```{r}
+Mode2<-function(v){
+   uniqv2 <- unique(Revenue$Country_Province)
+   uniqv2[which.max(tabulate(match(Revenue$Country_Province, uniqv2)))]
+}
+result2<-Mode2(Revenue$Country_Province)
+print(result2)
+
+#mode value for Country Province is NSW
+# Replacing NA's with NSW
+Revenue$Country_Province[is.na(Revenue$Country_Province)]<-"NSW"
+```
+
+#Checking the data and data types
+```{r}
+str(Revenue)
+summary(Revenue)
+```
+
+# > fitting basic model taking a random number of cluster say "3"
+
+```{r}
+set.seed(12345)
+model_km<-kmeans(Revenue$Revenue.AUD., centers = 3) # Elbow methods
+aggregate(Revenue$Revenue.AUD.,by=list(model_km$cluster),FUN=mean)
+```
+*Cluster1- Customers with Low Value*
+*Cluster2- Customers with High Value*
+*Cluster3- Customers with Moderate Value*
+
+# Customers with High Value are regular in nature and generate high revenue
+# Customers with Moderate Value are potential customers
+# Customers with low Value are irregular or gone away in nature
+
+
+
+# > calculating optimum number cluster
+
+```{r}
+optimcluster <- function(k){
+  cluster <- kmeans(Revenue$Revenue.AUD., k)
+  return(cluster$tot.withinss)
+}
+
+wss <- sapply(1:20, optimcluster)
+
+optimK <- data.frame(k = 1:20, wss)
+head(optimK, 10)
+```
+
+Interpretation: The method consists of plotting the explained variation as a function of the number of clusters, and picking the elbow of the curve as the number of clusters to use.
+
+### ploting the k value from 1 to 20 against within sum of square (wss)
+
+```{r}
+ggplot(data = optimK) + aes(x=k, y= wss) + geom_point() + geom_line()+
+  scale_x_continuous(breaks = seq(1,20,by = 1)) +geom_vline(xintercept = 4, linetype = 2)+
+  labs(subtitle = "Elbow method")
+
+OptimumClusters<- "Optimum number of cluster is 4"
+```
+
+# > Model fitting using optimum k
+
+```{r}
+set.seed(500000)
+model_km_optm<-kmeans(Revenue$Revenue.AUD., centers = 4) # Elbow methods
+plotcluster(Revenue$Revenue.AUD., model_km_optm$cluster)
+
+
+model_km_optm$centers #Display cluster centers
+Cluster_size<-table(model_km_optm$cluster) #Give a count of data points in each cluster
+print(Cluster_size)
+names(Cluster_size)<-c("High Value","Deal seekers","Loyal","Infrequent")
+Cluster_size
+Aggregate<-aggregate(Revenue$Revenue.AUD.,by=list(model_km_optm$cluster),FUN=mean)
+Aggregate$Group.1<-plyr::mapvalues( Aggregate$Group.1,
+                                      from = c(1,2,3,4),
+                                      to = c("High Value", "Deal seekers","Loyal","Infrequent"))
+
+Revenue$Clusters <- model_km_optm$cluster
+Revenue$Groups <- plyr::mapvalues( Revenue$Clusters,
+                                      from = c(1,2,3,4),
+                                      to = c("High Value", "Deal seekers","Loyal","Infrequent"))
+head(Revenue, 20)
+```
+**Analysis**
+
+# High value customers are those customers who generates high values of revenue for the retailer in range of 892 to 5387 AUD
+# Deal Seekers are customers who needs a little push and incentives in terms of sales and deals. They generate revenue in range of 135 to 325 AUD
+# Loyal customers are the potential customers who are regular in purchasing and generate revenue in range of 326 to 890 AUD
+# Infrequent customers are those customers who have either not generated any income or have brought revenue to the retailer less than 138 AUD
+
+```{r}
+o=order(model_km_optm$cluster)
+Revenue_1<-Revenue$Revenue.AUD.[o]
+Cluster_1<-model_km_optm$cluster[o]
+Groups_1<- Revenue$Groups[o]
+Customer_segmentation<-data.frame(Revenue_1, Cluster_1, Groups_1)
+```
+
+
+```{r}
+ggplot(Customer_segmentation, aes(x=Groups_1, y= Revenue_1, col = as.factor(Cluster_1))) +
+  geom_point()
+```
+
+
+```{r}
+library(RColorBrewer)
+coul2 <- brewer.pal(4, "Spectral")
+ggplot(Revenue, aes(x=Groups))+geom_bar(fill= coul2 )+xlab("Customer Groups")+ylab("Frequency")+
+ggtitle("Customer Target Groups")+ geom_text(aes(label = ..count..), stat = "count", vjust = 1.5, colour = "black")
+```
+
+
+```{r}
+Aggregate$x<-as.numeric(Aggregate$x)
+str(Aggregate$x)
+coul1 <- brewer.pal(4, "Set2")
+barp<-barplot(Aggregate$x, names.arg =Aggregate$Group.1, col=coul1, xlab = "Groups", ylab= "Average Revenue")
+
+```
+```{r}
+write.csv(Customer_segmentation, 'Customer_segmentation.csv')
+
+```
