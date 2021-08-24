@@ -5,23 +5,11 @@ date: "01/05/2021"
 output: word_document
 ---
 
-####################################### What you will learn and Implement #######################################
+# This project tries to identify the target audience for the company's upcoming ad campaign by statistically segmenting the audience based on Revenue using K means Clustering and Machine learning
 
-# > Understand kmeans clustering.
-# > Understand retail Data for applying kmeans clustering.
-# > Understand the objective.
-# > Maths of kmeans clustering.
-# > understand Optimum number of cluster.
-# > Using elbow method to determine the optimal number of cluster.
-# > model fitting
-# > Evaluation
+# The client is a leading Fashion retailer in Australia. Company runs a display advertising campaign for this brand, where it shows ads to users leading them to make a purchase on the brands website.The given project is based on dataset comprising of Sales data for all users who made a purchase online in the first half of October '17.
 
-# > Objective
 
-# The client is a leading Fashion retailer in Australia. Company runs a display advertising campaign for this brand, where it shows ads to users leading them to make a purchase on the brands website.The given dataset is the Sales data for all users who made a purchase online in the first half of October '17.
-
-# Based on your analysis, arrive at a statistical segmentation of the brands audience based 
-# on Revenue. The number of segments is up to you. Please provide definitions of each groups
 
 # > desired Library installation
 
